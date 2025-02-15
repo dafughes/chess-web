@@ -175,7 +175,7 @@ let wasm_bindgen;
             wasm.__wbg_game_free(ptr, 0);
         }
         constructor() {
-            const ret = wasm.engine_new();
+            const ret = wasm.game_new();
             this.__wbg_ptr = ret >>> 0;
             GameFinalization.register(this, this.__wbg_ptr, this);
             return this;
@@ -197,18 +197,13 @@ let wasm_bindgen;
         }
         /**
          * @param {string} square
-         * @returns {string | undefined}
+         * @returns {Piece | undefined}
          */
         get_piece(square) {
             const ptr0 = passStringToWasm0(square, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
             const len0 = WASM_VECTOR_LEN;
             const ret = wasm.game_get_piece(this.__wbg_ptr, ptr0, len0);
-            let v2;
-            if (ret[0] !== 0) {
-                v2 = getStringFromWasm0(ret[0], ret[1]).slice();
-                wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-            }
-            return v2;
+            return ret === 0 ? undefined : Piece.__wrap(ret);
         }
         /**
          * @returns {string}
@@ -275,6 +270,64 @@ let wasm_bindgen;
         }
     }
     __exports.Game = Game;
+
+    const PieceFinalization = (typeof FinalizationRegistry === 'undefined')
+        ? { register: () => {}, unregister: () => {} }
+        : new FinalizationRegistry(ptr => wasm.__wbg_piece_free(ptr >>> 0, 1));
+
+    class Piece {
+
+        static __wrap(ptr) {
+            ptr = ptr >>> 0;
+            const obj = Object.create(Piece.prototype);
+            obj.__wbg_ptr = ptr;
+            PieceFinalization.register(obj, obj.__wbg_ptr, obj);
+            return obj;
+        }
+
+        __destroy_into_raw() {
+            const ptr = this.__wbg_ptr;
+            this.__wbg_ptr = 0;
+            PieceFinalization.unregister(this);
+            return ptr;
+        }
+
+        free() {
+            const ptr = this.__destroy_into_raw();
+            wasm.__wbg_piece_free(ptr, 0);
+        }
+        /**
+         * @returns {string}
+         */
+        kind() {
+            let deferred1_0;
+            let deferred1_1;
+            try {
+                const ret = wasm.piece_kind(this.__wbg_ptr);
+                deferred1_0 = ret[0];
+                deferred1_1 = ret[1];
+                return getStringFromWasm0(ret[0], ret[1]);
+            } finally {
+                wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+            }
+        }
+        /**
+         * @returns {string}
+         */
+        color() {
+            let deferred1_0;
+            let deferred1_1;
+            try {
+                const ret = wasm.piece_color(this.__wbg_ptr);
+                deferred1_0 = ret[0];
+                deferred1_1 = ret[1];
+                return getStringFromWasm0(ret[0], ret[1]);
+            } finally {
+                wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+            }
+        }
+    }
+    __exports.Piece = Piece;
 
     async function __wbg_load(module, imports) {
         if (typeof Response === 'function' && module instanceof Response) {

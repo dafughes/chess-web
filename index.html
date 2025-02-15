@@ -4,10 +4,37 @@
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
     <meta  name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <link rel="stylesheet" href="style.css">
+
+
 </head>
 
 <body>
-    <div id="board"></div>
+    <div class="clock" id="top-clock"><p>clock</p></div>
+    <div class="clock" id="bottom-clock"><p>clock</p></div>
+    <div id="board" class="blur"></div>
+    <div id="promotion-popup" class="popup"></div>
+    <div id="menu" class="popup">
+        <div><h1>Hello, want to play some chess?</h1></div>
+        <div><button onclick="menuPlay()">Yes</button></div>
+    </div>
+    <div id="setup" class="popup">
+        <div><h1>Setup</h1></div>
+        <div>
+            <label><input type="radio" name="color" value="white" checked="true">White</label>
+            <label><input type="radio" name="color" value="black">Black</label>
+        </div>
+        <div>
+            <label><input type="radio" name="time" value="600" checked="true">10 min</label>
+            <label><input type="radio" name="time" value="1">3 min</label>
+        </div>
+        <div>
+            <button onclick="go()">Go!</button>
+        </div>
+    </div>
+    <div id="gameover" class="popup">
+        <div><h1 id="gameover-msg"></h1></div>
+        <div><button onclick="playAgain()">Play again?</button></div>
+    </div>
 
     <!-- Make `wasm_bindgen` available for `index.js` -->
     <script src='./pkg/chess_web.js'></script>

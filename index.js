@@ -1,177 +1,133 @@
 // import Game from wasm
 const { Game } = wasm_bindgen;
 
-class ChessGame {
-  constructor(white_time_ms, black_time_ms) {
-    this.game = new Game();
+function squareRank(square) {
+  return square.charCodeAt(1) - "1".charCodeAt(0);
+}
 
+function squareFile(square) {
+  return square.charCodeAt(0) - "a".charCodeAt(0);
+}
+
+function makeSquare(rank, file) {
+  return `${String.fromCharCode("a".charCodeAt(0) + file)}${rank + 1}`;
+}
+
+class Clock {
+  constructor(timeSeconds) {
     this.time = {
-      "white": white_time_ms,
-      "black": black_time_ms,
+      "white": timeSeconds,
+      "black": timeSeconds,
     };
 
     this.startTime = null;
+    this.turn = "white";
   }
 
-  /**
-   * Returns the current player to make a move.
-   * @example
-   * let game = new ChessGame(); // Creates a new game with standard starting position.
-   * console.assert(game.colorToMove() === "white");
-   * game.makeMove("e2e4");
-   * console.assert(game.colorToMove() === "black");
-   * @returns {string}
-   */
-  colorToMove() {
-    return this.game.color_to_move();
-  }
+  getTime(player) {
+    if (this.startTime && (player === this.turn)) {
+      const d = (new Date() - this.startTime) / 1000;
 
-  isOver() {
-    return this.game.legal_moves().length === 0;
-  }
-
-  /**
-   * Returns an array of all legal moves in current position.
-   * @example
-   * let game = new ChessGame(); // Creates a new game with standard starting position.
-   * console.assert(game.legalMoves().length === 20);
-   * @param {string} move
-   * @returns {Array.<string>}
-   */
-  legalMoves() {
-    return this.game.legal_moves();
-  }
-
-  /**
-   * Checks if a move is legal in current position.
-   * @example
-   * let game = new ChessGame(); // Creates a new game with standard starting position.
-   * console.assert(game.isLegalMove("a7a5") === false);  // White to move currently.
-   * console.assert(game.isLegalMove("e2e4") === true);
-   * @param {string} move
-   * @returns {boolean}
-   */
-  isLegalMove(move) {
-    return this.game.legal_moves().includes(move);
-  }
-
-  /**
-   * Makes a move.
-   * @example
-   * let game = new ChessGame(); // Creates a new game with standard starting position.
-   * console.assert(game.colorToMove() === "white");
-   * game.makeMove("e2e4");  // Makes the move "white pawn to e4".
-   * console.assert(game.colorToMove() === "black");
-   * @param {string} move
-   */
-  makeMove(move) {
-    if (this.isLegalMove(move)) {
-      this.game.make_move(move);
-    }
-  }
-
-  /**
-   * Returns the piece on `square`.
-   * @example
-   * let game = new ChessGame(); // Creates a new game with standard starting position.
-   * console.assert(game.getPiece("e4") === undefined);
-   * console.assert(game.getPiece("a1") === "R");
-   * @param {string} square
-   * @returns {string | undefined}
-   */
-  getPiece(square) {
-    return this.game.get_piece(square);
-  }
-
-  /**
-   * UCI command telling engine what the current position is. Must be sent before every "go"-command.
-   * @example
-   * let game = new ChessGame(); // Creates a new game with standard starting position.
-   * console.assert(game.positionCommand() === "position startpos");
-   * game.makeMove("e2e4");
-   * console.assert(game.positionCommand() === "position startpos moves e2e4");
-   * @returns {string}
-   */
-  positionCommand() {
-    const moves = this.game.move_history().join(" ");
-    if (moves === "") {
-      return "position startpos";
+      const t = this.time[player] - d;
+      return t < 0 ? 0 : t; // Clamp positive
     } else {
-      return `position startpos moves ${moves}`;
+      const t = this.time[player];
+      return t < 0 ? 0 : t; // Clamp positive
     }
   }
 
-  /**
-   * UCI command telling engine what the current position is. Must be sent before every "go"-command.
-   * UCI protocol has many search related parameters but this engine only cares about time left for players.
-   * @example
-   * let game = new ChessGame(60000, 60000); // Creates a new game with standard starting position.
-   * console.assert(game.goCommand() === "go wtime 60000 btime 60000");
-   * @returns {string}
-   */
-  goCommand() {
-    return `go wtime ${this.time["white"]} btime ${this.time["black"]}`;
-  }
-
-  result() {
-    if (this.game.legal_moves().length === 0) {
-      if (this.game.is_check()) {
-        return this.colorToMove() === "white" ? "black" : "white";
-      } else {
-        return "draw";
-      }
-    }
-
-    return "ongoing";
-  }
-
-  startTimer() {
-    this.startTime = Date.now();
-  }
-
-  stopTimer() {
+  toggle() {
     if (this.startTime) {
-      const elapsed = Date.now() - this.startTime;
-
-      this.time[this.colorToMove()] -= elapsed;
-
-      this.startTime = null;
+      const d = (new Date() - this.startTime) / 1000;
+      this.time[this.turn] -= d;
     }
+
+    this.startTime = new Date();
+    this.turn = this.turn === "white" ? "black" : "white";
   }
 
-  getTime(color) {
-    if (this.startTime) {
-      const elapsed = Date.now() - this.startTime;
-
-      if (color === this.colorToMove()) {
-        return this.time[color] - elapsed;
-      } else {
-        return this.time[color];
-      }
+  static timeString(t) {
+    if (t >= 60) {
+      const min = Math.floor(t / 60);
+      const sec = Math.floor(t % 60);
+      const leadingZeros = sec < 10 ? "0" : "";
+      return `${min}:${leadingZeros}${sec}`;
     } else {
-      return this.time[color];
+      return `${t.toFixed(1)}`;
     }
   }
 }
 
 class UI {
-  constructor(game, playerIsWhite) {
-    this.onPlayerMove = null;
+  static interval = null;
 
+  constructor(playerColor, timeSeconds, onPlayerMove) {
+    this.playerColor = playerColor;
+    this.timeSeconds = timeSeconds;
+    this.game = new Game();
+    this.clock = new Clock(timeSeconds);
+
+    this.fromSquare = null;
+    this.toSquare = null;
+
+    this.gameOver = false;
+
+    // This is called when the human player makes a move through the GUI
+    this.onPlayerMove = onPlayerMove;
+
+    this.buildBoard();
+    this.updateBoard();
+    this.buildPromotionPopup();
+
+    const blackClock = playerColor === "white" ? "top-clock" : "bottom-clock";
+    document.getElementById(blackClock).classList.add("black-text");
+
+    if (UI.interval) {
+      clearInterval(UI.interval);
+    }
+    UI.interval = setInterval(() => {
+      const whiteTime = Clock.timeString(this.clock.getTime("white"));
+      const blackTime = Clock.timeString(this.clock.getTime("black"));
+
+      if (whiteTime <= 0) {
+        this.gameOver = true;
+        this.showGameOver("black wins!");
+      } else if (blackTime <= 0) {
+        this.gameOver = true;
+        this.showGameOver("white wins!");
+      }
+
+      if (playerColor === "white") {
+        document.getElementById("bottom-clock").firstElementChild.textContent =
+          whiteTime;
+        document.getElementById("top-clock").firstElementChild.textContent =
+          blackTime;
+      } else {
+        document.getElementById("bottom-clock").firstElementChild.textContent =
+          blackTime;
+        document.getElementById("top-clock").firstElementChild.textContent =
+          whiteTime;
+      }
+    }, 100);
+  }
+
+  buildBoard() {
     const board = document.getElementById("board");
+    // Clear previous stuff
+    board.innerHTML = "";
 
     for (let i = 0; i < 64; i++) {
-      const squareElement = document.createElement("div");
-      squareElement.classList.add("square");
+      const square = document.createElement("div");
+      square.classList.add("square");
 
-      const rank = playerIsWhite ? 7 - Math.floor(i / 8) : Math.floor(i / 8);
-      const file = playerIsWhite ? i % 8 : 7 - i % 8;
+      const rank = this.playerColor === "white"
+        ? 7 - Math.floor(i / 8)
+        : Math.floor(i / 8);
+      const file = this.playerColor === "white" ? i % 8 : 7 - i % 8;
 
-      const square = `${String.fromCharCode("a".charCodeAt(0) + file)}${
-        rank + 1
-      }`;
+      const squareId = makeSquare(rank, file);
 
-      squareElement.setAttribute("id", square);
+      square.setAttribute("id", squareId);
 
       // Light or dark?
       let isDark = file % 2 === 0;
@@ -179,217 +135,265 @@ class UI {
         isDark = !isDark;
       }
 
-      squareElement.classList.add(isDark ? "dark" : "light");
+      square.classList.add(isDark ? "dark" : "light");
 
-      board.appendChild(squareElement);
-    }
+      square.onclick = (event) => {
+        if (this.gameOver) {
+          return;
+        }
 
-    this.update(game);
-
-    // Stores the starting square for move;
-    this.from = null;
-
-    const squares = document.querySelectorAll("#board .square");
-    squares.forEach((s) => {
-      s.onclick = (e) => {
-        if (this.from) {
-          const to = e.target.id;
-          const move = `${this.from.id}${to}`;
-
-          if (this.isLegalMove(move, game)) {
-            this.onPlayerMove(move);
-          }
-          // Remove all highlights
-          squares.forEach((sq) => {
-            sq.classList.remove("highlight");
-          });
-          this.from?.classList.remove("highlight");
-          this.from = null;
-        } else {
-          // Check that selected piece has valid moves so it can be highlighted
-          const playerColor = playerIsWhite ? "white" : "black";
-          const selectableSquares = new Set(
-            Array.from(document.querySelectorAll(".square")).filter((s) => {
-              return s.firstElementChild?.id.startsWith(playerColor);
-            }).map((s) => s.id),
+        const squareId = event.target.id;
+        if (this.fromSquare) {
+          this.toSquare = squareId;
+          const move = `${this.fromSquare}${this.toSquare}`;
+          const moves = this.game.legal_moves().filter((m) =>
+            m.startsWith(move)
           );
 
-          if (
-            selectableSquares.has(s.id) && game.colorToMove() === playerColor
-          ) {
-            this.from = e.target;
-            this.from.classList.add("highlight");
+          if (moves.length === 1) {
+            this.makeMove(move);
 
-            // Highlight all destination squares
-            const destinations = game.legalMoves().filter((move) =>
-              move.startsWith(e.target.id)
-            ).map((move) => move.slice(2));
-
-            destinations.forEach((d) =>
-              document.getElementById(d).classList.add("highlight")
-            );
+            this.fromSquare = null;
+            this.toSquare = null;
+          } else if (moves.length === 4) {
+            // Promotion
+            this.showPromotionPopup();
+          } else {
+            this.clearSelected();
+            this.clearHighlights();
+            this.hidePromotionPopup();
+            this.fromSquare = null;
+            this.toSquare = null;
           }
+        } else {
+          this.setSelected(squareId);
         }
       };
-    });
+      board.appendChild(square);
+    }
   }
 
-  isLegalMove(move, game) {
-    // TODO: Promotions!!!
-    return game.legalMoves().includes(move);
+  buildPromotionPopup() {
+    const promotionPopup = document.getElementById("promotion-popup");
+    // Clear previous stuff
+    promotionPopup.innerHTML = "";
+
+    [["queen", "q"], ["rook", "r"], ["bishop", "b"], ["knight", "n"]].forEach(
+      ([kind, k]) => {
+        const square = document.createElement("div");
+        square.classList.add("square");
+
+        const img = document.createElement("img");
+        img.classList.add(kind);
+
+        img.src = `./assets/${this.playerColor}-${kind}.svg`;
+
+        square.onclick = (e) => {
+          const move = `${this.fromSquare}${this.toSquare}${k}`;
+          this.makeMove(move);
+          this.hidePromotionPopup();
+          this.clearSelected();
+          this.fromSquare = null;
+          this.toSquare = null;
+        };
+        square.appendChild(img);
+
+        promotionPopup.appendChild(square);
+      },
+    );
   }
 
-  // Updates the piece positions.
-  update(game) {
-    for (let i = 0; i < 64; i++) {
-      const rank = 7 - Math.floor(i / 8);
-      const file = i % 8;
+  setSelected(squareId) {
+    if (
+      this.game.get_piece(squareId)?.color() === this.playerColor &&
+      this.game.color_to_move() === this.playerColor
+    ) {
+      this.fromSquare = squareId;
+      document.getElementById(squareId).classList.add("selected");
 
-      const square = `${String.fromCharCode("a".charCodeAt(0) + file)}${
-        rank + 1
-      }`;
+      this.game.legal_moves().filter((move) => {
+        if (move.startsWith(squareId)) {
+          const dest = move.slice(2, 4);
+          document.getElementById(dest).classList.add("highlight");
+        }
+      });
+    }
+  }
 
-      const squareElement = document.getElementById(square);
+  clearSelected() {
+    document.getElementById(this.fromSquare).classList.remove("selected");
+  }
 
-      const pieces = {
-        "P": "white-pawn",
-        "N": "white-knight",
-        "B": "white-bishop",
-        "R": "white-rook",
-        "Q": "white-queen",
-        "K": "white-king",
-        "p": "black-pawn",
-        "n": "black-knight",
-        "b": "black-bishop",
-        "r": "black-rook",
-        "q": "black-queen",
-        "k": "black-king",
-      };
+  clearHighlights() {
+    document.querySelectorAll(".square").forEach((square) =>
+      square.classList.remove("highlight")
+    );
+  }
 
-      const p = game.getPiece(square);
-      if (p) {
-        squareElement.innerHTML = `
-            <div class="piece" id="${pieces[p]}" draggable="true">
-              <img src=./assets/${pieces[p]}.svg draggable="true">
-            </div>
-        `;
+  showPromotionPopup() {
+    document.getElementById("board").classList.add("blur", "pointer");
+    document.getElementById("promotion-popup").classList.add(
+      "popup-show",
+    );
+  }
+
+  hidePromotionPopup() {
+    document.getElementById("board").classList.remove("blur");
+    document.getElementById("promotion-popup").classList.remove(
+      "popup-show",
+    );
+  }
+
+  makeMove(move) {
+    this.game.make_move(move);
+    this.clock.toggle();
+
+    this.updateBoard();
+    this.clearSelected();
+    this.clearHighlights();
+    this.onPlayerMove(move);
+
+    // Check result
+    if (this.game.legal_moves().length === 0) {
+      if (this.game.is_check()) {
+        const winner = this.game.color_to_move() === "white"
+          ? "black"
+          : "white";
+        const msg = `${winner} wins!`;
+        this.showGameOver(msg);
       } else {
-        squareElement.innerHTML = "";
+        this.showGameOver("Stalemate");
       }
     }
   }
-}
 
-function formatTime(timeMilliseconds) {
-  // Clamp time to zero
-  timeMilliseconds = timeMilliseconds < 0 ? 0 : timeMilliseconds;
+  showGameOver(msg) {
+    clearInterval(UI.interval);
+    UI.interval = null;
 
-  const seconds = timeMilliseconds / 1000;
-  if (seconds >= 60) {
-    const minutes = Math.floor(seconds / 60);
-    const secondsRemainder = Math.floor(seconds % 60);
-    const leadingZeros = secondsRemainder < 10 ? "0" : "";
-    return `${minutes}:${leadingZeros}${secondsRemainder}`;
-  } else {
-    return `${seconds.toFixed(1)}`;
+    document.getElementById("board").classList.add("blur");
+    const gameOver = document.getElementById("gameover");
+    gameOver.classList.add("popup-show");
+    gameOver.firstElementChild.firstElementChild.innerHTML =
+      `Game over, ${msg}`;
+  }
+
+  hideGameOver() {
+    document.getElementById("gameover").classList.remove("popup-show");
+  }
+
+  makeEngineMove(move) {
+    this.game.make_move(move);
+    this.clock.toggle();
+
+    this.updateBoard();
+
+    // Check result
+    if (this.game.legal_moves().length === 0) {
+      if (this.game.is_check()) {
+        const winner = this.game.color_to_move() === "white"
+          ? "black"
+          : "white";
+        const msg = `${winner} wins!`;
+        this.showGameOver(msg);
+      } else {
+        this.showGameOver("Stalemate");
+      }
+    }
+  }
+
+  updateBoard() {
+    document.querySelectorAll("#board .square").forEach((square) => {
+      const piece = this.game.get_piece(square.id);
+      if (piece) {
+        square.innerHTML =
+          `<img class="${piece.kind()} ${piece.color()}" src="./assets/${piece.color()}-${piece.kind()}.svg">`;
+      } else {
+        square.innerHTML = "";
+      }
+    });
   }
 }
 
-function gameOverMessage(result) {
-  console.log(result);
+function positionCommand(game) {
+  const moves = game.move_history();
+
+  let movePart = "";
+  if (moves.length > 0) {
+    movePart = `moves ${moves.join(" ")}`;
+  }
+
+  // return `position startpos ${movePart}`;
+  return `position fen 4k3/P3N3/8/8/8/8/8/R3K2R w KQ - 0 1 ${movePart}`;
 }
+
+function goCommand(clock) {
+  const wtime = Math.floor(clock.getTime("white") * 1000);
+  const btime = Math.floor(clock.getTime("black") * 1000);
+  return `go wtime ${wtime} btime ${btime}`;
+}
+
+var ui = null;
+var worker;
 
 async function run() {
   // Load the Wasm file by awaiting the Promise returned by `wasm_bindgen`
   // `wasm_bindgen` was imported in `index.html`
   await wasm_bindgen();
 
-  const worker = new Worker("./worker.js");
+  worker = new Worker("./worker.js");
 
   // I have no idea how to do web worker stuff, wait a small time so worker gets initialized.
   await new Promise((r) => setTimeout(r, 100));
 
-  const game = new ChessGame(600000, 600000);
-  const playerIsWhite = true;
-  const ui = new UI(game, playerIsWhite);
+  document.getElementById("menu").classList.add("popup-show");
 
-  if (playerIsWhite) {
-    if (!playerIsWhite) {
-      worker.postMessage(game.positionCommand());
-      game.startTimer();
-      worker.postMessage(game.goCommand());
-    }
-  }
+  ui = new UI("white", 60, (move) => {
+    worker.postMessage(positionCommand(ui.game));
+    worker.postMessage(goCommand(ui.clock));
+  });
 
-  let gameOver = false;
-
-  setInterval(() => {
-    if (gameOver) {
-      return;
-    }
-    // Check if out of time
-    if (game.getTime("white") <= 0 || game.getTime("black") <= 0) {
-      gameOver = true;
-      game.stopTimer();
-      const winner = game.colorToMove() === "white" ? "black" : "white";
-      gameOverMessage(`Time out - ${winner} wins!`);
-    }
-
-    const title = `${formatTime(game.getTime("white"))} ${
-      formatTime(game.getTime("black"))
-    }`;
-    document.title = title;
-  }, 100);
-
-  ui.onPlayerMove = (move) => {
-    if (gameOver) {
-      return;
-    }
-
-    if (
-      (playerIsWhite && game.colorToMove() === "black") ||
-      (!playerIsWhite && game.colorToMove() === "white")
-    ) {
-      return;
-    }
-
-    game.stopTimer();
-
-    console.log(`Player made move ${move}`);
-
-    game.makeMove(move);
-    ui.update(game);
-
-    // Check if game is over
-    if (game.isOver()) {
-      gameOver = true;
-      gameOverMessage(`${game.result()} wins!`);
-      return;
-    }
-
-    worker.postMessage(game.positionCommand());
-    game.startTimer();
-    worker.postMessage(game.goCommand());
-  };
-
-  worker.onmessage = (e) => {
-    game.stopTimer();
-
-    const engineMove = e.data.slice(9);
-    console.log(`Engine made move ${engineMove}`);
-
-    game.makeMove(engineMove);
-    ui.update(game);
-
-    // Check if game is over
-    if (game.isOver()) {
-      gameOverMessage(`${game.result()} wins!`);
-
-      return;
-    }
-
-    game.startTimer();
+  worker.onmessage = (msg) => {
+    const bestmove = msg.data.slice(9);
+    ui.makeEngineMove(bestmove);
   };
 }
 
 run();
+
+function menuPlay() {
+  document.getElementById("menu").classList.remove("popup-show");
+  document.getElementById("setup").classList.add("popup-show");
+}
+
+function go() {
+  // Get game configs
+  const playerColor =
+    document.querySelector('input[name="color"]:checked').value;
+
+  const time = Number(
+    document.querySelector('input[name="time"]:checked').value,
+  );
+
+  document.getElementById("setup").classList.remove("popup-show");
+  ui = new UI(playerColor, time, (move) => {
+    worker.postMessage(positionCommand(ui.game));
+    worker.postMessage(goCommand(ui.clock));
+  });
+  worker.onmessage = (msg) => {
+    const bestmove = msg.data.slice(9);
+    console.log("Engine move: " + bestmove);
+    ui.makeEngineMove(bestmove);
+  };
+  document.getElementById("board").classList.remove("blur");
+
+  if (playerColor === "black") {
+    worker.postMessage(positionCommand(ui.game));
+    worker.postMessage(goCommand(ui.clock));
+  }
+}
+
+function playAgain() {
+  document.getElementById("gameover").classList.remove("popup-show");
+  document.getElementById("setup").classList.add("popup-show");
+}

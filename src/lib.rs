@@ -3,14 +3,37 @@ use std::sync::{atomic::AtomicBool, Arc};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
+pub struct Piece {
+    kind: String,
+    color: String,
+}
+
+#[wasm_bindgen]
+impl Piece {
+    #[wasm_bindgen]
+    pub fn kind(&self) -> String {
+        self.kind.clone()
+    }
+
+    #[wasm_bindgen]
+    pub fn color(&self) -> String {
+        self.color.clone()
+    }
+}
+
+
+#[wasm_bindgen]
 pub struct Game(chess::game::Game);
 
 #[wasm_bindgen]
 impl Game {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self(chess::game::Game::default())
+        Self(chess::game::Game::new("4k3/P3N3/8/8/8/8/8/R3K2R w KQ - 0 1").unwrap())
+        // Self(chess::game::Game::default())
     }
+
+
 
     #[wasm_bindgen]
     pub fn color_to_move(&self) -> String {
@@ -21,14 +44,28 @@ impl Game {
     }
     
     #[wasm_bindgen]
-    pub fn get_piece(&self, square: &str) -> Option<String> {
+    pub fn get_piece(&self, square: &str) -> Option<Piece> {
         let s = chess::game::square::Square::new(
             square.chars().nth(1)?.try_into().ok()?,
             square.chars().nth(0)?.try_into().ok()?,
         );
 
         if let Some(piece) = self.0.get_piece(s) {
-            Some(char::from(piece).to_string())
+            let kind = match piece.kind() {
+                chess::game::piece::PieceKind::Pawn => String::from("pawn"),
+                chess::game::piece::PieceKind::Knight => String::from("knight"),
+                chess::game::piece::PieceKind::Bishop => String::from("bishop"),
+                chess::game::piece::PieceKind::Rook => String::from("rook"),
+                chess::game::piece::PieceKind::Queen => String::from("queen"),
+                chess::game::piece::PieceKind::King => String::from("king")
+            };
+
+            let color = match piece.color() {
+                chess::game::color::Color::White => String::from("white"),
+                chess::game::color::Color::Black => String::from("black"),
+            };
+
+            Some(Piece {kind, color})
         } else {
             None
         }
