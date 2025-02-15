@@ -8,7 +8,7 @@
 @media screen and (min-width: 600px) {
   :root {
     --popup-width: 40vmin;
-    --popup-height: 40vmin;
+    --popup-height: 60vmin;
 
     .clock {
       color: white;
@@ -26,13 +26,21 @@
       position: fixed;
       bottom: 1%;
     }
+
+    .popup {
+      border-radius: 50px;
+    }
+
+    .popup button {
+      border-radius: 50px;
+    }
   }
 }
 
 @media screen and (max-width: 600px) {
   :root {
     --popup-width: 60vmin;
-    --popup-height: 80vmin;
+    --popup-height: 90vmin;
 
 
     .clock {
@@ -52,6 +60,11 @@
       position: fixed;
       bottom: 10%;
     }
+
+    #gameover  button {
+      width: 70%;
+      bottom: -10%;
+    }
   }
 }
 
@@ -70,6 +83,10 @@ html, body {
     font-style: normal;
     user-select: none;
 
+  }
+
+  h1 {
+    font-size: 35px;
   }
 
   p {
@@ -149,7 +166,7 @@ img {
 .popup {
   color: var(--light);
   background-color: var(--dark);
-  border-radius: 0.5em;
+  border-radius: 30px;
   position: absolute;
   top: -50%;
   left: 50%;
@@ -160,18 +177,22 @@ img {
 
 .popup div {
   margin: auto;
-  padding: 5px;
+  padding: 2px;
   text-align: center;
 }
 
 .popup button {
   position: absolute;
-  bottom: 10%;
+  bottom: 0%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 50%;
-  border-radius: 1em;
-  background-color: white;
+  border-radius: 30px;
+  background-color: var(--light);
+  border-style: none;
+  padding: 5%;
+  font-size: 3em;
+  color: var(--dark)
 }
 
 #promotion-popup.popup-show  {
@@ -194,16 +215,12 @@ img {
 
 #promotion-popup .square:hover {
   opacity: 90%;
-  /* filter: brightness(150%) */
 }
 
 
 #menu {
   width: var(--popup-width);
   height: var(--popup-height);
-  /* width: calc(var(--width) / 2); */
-  /* height: calc(var(--height) / 2); */
-
 }
 
 #setup {
@@ -215,4 +232,53 @@ img {
   width: var(--popup-width);
   height: var(--popup-height);
 }
+
+[type=radio] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+#setup label {
+  display: inline-block;
+  align-items: center;
+  width: calc(var(--width) / 8);
+  height: calc(var(--height) / 8);
+  /* margin: 10px; */
+}
+
+#setup img {
+  width: calc(var(--width) / 8);
+  height: calc(var(--height) / 8);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+#setup input {
+  width: calc(var(--width) / 8);
+  height: calc(var(--height) / 8);
+  cursor: pointer;
+  pointer-events: all;
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+
+[type=radio]:checked + img{
+  background-color: var(--light);
+  border-radius: 10px;
+}
+
+[type=radio]:checked + label{
+  background-color: var(--light);
+  color: var(--dark);
+  border-radius: 10px;
+}
+
+
+
+
+
+
 

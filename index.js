@@ -323,8 +323,8 @@ function positionCommand(game) {
     movePart = `moves ${moves.join(" ")}`;
   }
 
-  // return `position startpos ${movePart}`;
-  return `position fen 4k3/P3N3/8/8/8/8/8/R3K2R w KQ - 0 1 ${movePart}`;
+  return `position startpos ${movePart}`;
+  // return `position fen 4k3/P3N3/8/8/8/8/8/R3K2R w KQ - 0 1 ${movePart}`;
 }
 
 function goCommand(clock) {

@@ -29,8 +29,8 @@ pub struct Game(chess::game::Game);
 impl Game {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self(chess::game::Game::new("4k3/P3N3/8/8/8/8/8/R3K2R w KQ - 0 1").unwrap())
-        // Self(chess::game::Game::default())
+        // Self(chess::game::Game::new("4k3/P3N3/8/8/8/8/8/R3K2R w KQ - 0 1").unwrap())
+        Self(chess::game::Game::default())
     }
 
 

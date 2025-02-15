@@ -175,7 +175,7 @@ let wasm_bindgen;
             wasm.__wbg_game_free(ptr, 0);
         }
         constructor() {
-            const ret = wasm.game_new();
+            const ret = wasm.engine_new();
             this.__wbg_ptr = ret >>> 0;
             GameFinalization.register(this, this.__wbg_ptr, this);
             return this;

@@ -19,13 +19,25 @@
     </div>
     <div id="setup" class="popup">
         <div><h1>Setup</h1></div>
-        <div>
-            <label><input type="radio" name="color" value="white" checked="true">White</label>
-            <label><input type="radio" name="color" value="black">Black</label>
+        <div class="color">
+            <label>
+                <input type="radio"  name="color" value="white" checked>
+                <img src="./assets/white-king.svg">
+            </label>
+            <label>
+                <input type="radio"  name="color" value="black">
+                <img src="./assets/black-king.svg">
+            </label>
         </div>
-        <div>
-            <label><input type="radio" name="time" value="600" checked="true">10 min</label>
-            <label><input type="radio" name="time" value="1">3 min</label>
+        <div class="time" >
+            <label>
+                <input type="radio" name="time" value="600" checked>
+                <label>10 min</label>
+            </label>
+            <label>
+                <input type="radio" name="time" value="1">
+                <label>3 min</label>
+            </label>
         </div>
         <div>
             <button onclick="go()">Go!</button>
