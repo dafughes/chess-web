@@ -80,6 +80,8 @@ class UI {
     this.buildPromotionPopup();
 
     const blackClock = playerColor === "white" ? "top-clock" : "bottom-clock";
+    document.getElementById("top-clock").classList.remove("black-text");
+    document.getElementById("bottom-clock").classList.remove("black-text");
     document.getElementById(blackClock).classList.add("black-text");
 
     if (UI.interval) {
